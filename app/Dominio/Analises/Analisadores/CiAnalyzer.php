@@ -25,7 +25,7 @@ class CiAnalyzer
                 SeveridadeAchado::Media,
                 'Configuração de CI ausente',
                 'Não foi encontrada configuração convencional de GitHub Actions, GitLab CI ou Bitbucket Pipelines.',
-                ['provedores_procurados' => ['github_actions', 'gitlab_ci', 'bitbucket_pipelines'], 'estado' => 'ausente'],
+                ['provedores_procurados' => ['acoes_github', 'ci_gitlab', 'pipelines_bitbucket'], 'estado' => 'ausente'],
                 'Adicionar uma pipeline de integração contínua com testes e verificações de qualidade.',
             )];
         }
@@ -79,19 +79,19 @@ class CiAnalyzer
             caminhoArquivo: $arquivosLidos[0],
         );
 
-        if (! $comandos['artisan_test'] && ! $comandos['phpunit'] && ! $comandos['pest']) {
+        if (! $comandos['teste_artisan'] && ! $comandos['phpunit'] && ! $comandos['pest']) {
             $achados[] = $this->achado(
                 'ci.testes_ausentes',
                 SeveridadeAchado::Media,
                 'Execução de testes ausente no CI',
                 'A configuração de CI não apresenta sinais de execução por Artisan, PHPUnit ou Pest.',
-                ['comandos_de_teste' => array_intersect_key($comandos, array_flip(['artisan_test', 'phpunit', 'pest'])), 'detectado' => false],
+                ['comandos_de_teste' => array_intersect_key($comandos, array_flip(['teste_artisan', 'phpunit', 'pest'])), 'detectado' => false],
                 'Adicionar a execução automatizada da suíte de testes à pipeline.',
                 $arquivosLidos[0],
             );
         }
 
-        $qualidade = array_intersect_key($comandos, array_flip(['pint', 'phpstan', 'larastan', 'composer_validate']));
+        $qualidade = array_intersect_key($comandos, array_flip(['pint', 'phpstan', 'larastan', 'validacao_composer']));
 
         if (! in_array(true, $qualidade, true)) {
             $achados[] = $this->achado(
@@ -112,10 +112,10 @@ class CiAnalyzer
     private function localizarArquivos(string $diretorioProjeto): array
     {
         $candidatos = [];
-        $diretorioWorkflows = $diretorioProjeto.DIRECTORY_SEPARATOR.'.github'.DIRECTORY_SEPARATOR.'workflows';
+        $diretorioFluxos = $diretorioProjeto.DIRECTORY_SEPARATOR.'.github'.DIRECTORY_SEPARATOR.'workflows';
 
-        if ($this->diretorioSeguro($diretorioWorkflows, $diretorioProjeto)) {
-            $nomes = scandir($diretorioWorkflows) ?: [];
+        if ($this->diretorioSeguro($diretorioFluxos, $diretorioProjeto)) {
+            $nomes = scandir($diretorioFluxos) ?: [];
             sort($nomes);
 
             foreach ($nomes as $nome) {
@@ -123,7 +123,7 @@ class CiAnalyzer
                     continue;
                 }
 
-                $caminho = $diretorioWorkflows.DIRECTORY_SEPARATOR.$nome;
+                $caminho = $diretorioFluxos.DIRECTORY_SEPARATOR.$nome;
 
                 if ($this->arquivoSeguro($caminho, $diretorioProjeto)) {
                     $candidatos['.github/workflows/'.$nome] = $caminho;
@@ -146,13 +146,13 @@ class CiAnalyzer
     private function detectarComandos(string $conteudo): array
     {
         $padroes = [
-            'artisan_test' => '~(?:^|[\s"\'`./])php\s+artisan\s+test\b~mi',
+            'teste_artisan' => '~(?:^|[\s"\'`./])php\s+artisan\s+test\b~mi',
             'phpunit' => '~(?:^|[\s"\'`./])(?:vendor/bin/)?phpunit\b~mi',
             'pest' => '~(?:^|[\s"\'`./])(?:vendor/bin/)?pest\b~mi',
             'pint' => '~(?:^|[\s"\'`./])(?:vendor/bin/)?pint\b~mi',
             'phpstan' => '~(?:^|[\s"\'`./])(?:vendor/bin/)?phpstan\b~mi',
             'larastan' => '~(?:^|[\s"\'`./])(?:vendor/bin/)?larastan\b~mi',
-            'composer_validate' => '~\bcomposer\s+validate\b~mi',
+            'validacao_composer' => '~\bcomposer\s+validate\b~mi',
         ];
         $detectados = [];
 

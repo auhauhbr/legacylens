@@ -41,7 +41,7 @@ YAML);
         $avaliacao = collect($achados)->firstWhere('codigo', 'ci.comandos_detectados');
 
         $this->assertNotNull($avaliacao);
-        $this->assertTrue($avaliacao->evidencia['comandos']['artisan_test']);
+        $this->assertTrue($avaliacao->evidencia['comandos']['teste_artisan']);
         $this->assertTrue($avaliacao->evidencia['comandos']['pint']);
         $this->assertTrue($avaliacao->evidencia['comandos']['phpstan']);
         $this->assertNotContains('ci.testes_ausentes', $this->codigos($achados));

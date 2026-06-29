@@ -15,10 +15,10 @@ class DocumentationAnalyzer
     /** @return list<DadosAchado> */
     public function analisar(string $diretorioProjeto): array
     {
-        $readme = $this->localizarReadme($diretorioProjeto);
+        $arquivoReadme = $this->localizarArquivoReadme($diretorioProjeto);
         $achados = [];
 
-        if ($readme === null) {
+        if ($arquivoReadme === null) {
             $achados[] = $this->achado(
                 'documentacao.readme_ausente',
                 SeveridadeAchado::Baixa,
@@ -28,8 +28,8 @@ class DocumentationAnalyzer
                 'Adicionar um README com instruções essenciais para desenvolvimento e operação.',
             );
         } else {
-            $caminhoRelativo = basename($readme);
-            $conteudo = $this->lerArquivoLimitado($readme);
+            $caminhoRelativo = basename($arquivoReadme);
+            $conteudo = $this->lerArquivoLimitado($arquivoReadme);
             $achados[] = $this->achado(
                 'documentacao.readme_detectado',
                 SeveridadeAchado::Informativa,
@@ -50,7 +50,7 @@ class DocumentationAnalyzer
                     $caminhoRelativo,
                 );
             } else {
-                $achados = [...$achados, ...$this->avaliarSecoesReadme($conteudo, $caminhoRelativo)];
+                $achados = [...$achados, ...$this->avaliarSecoesDoReadme($conteudo, $caminhoRelativo)];
             }
         }
 
@@ -61,14 +61,14 @@ class DocumentationAnalyzer
     }
 
     /** @return list<DadosAchado> */
-    private function avaliarSecoesReadme(string $conteudo, string $caminho): array
+    private function avaliarSecoesDoReadme(string $conteudo, string $caminho): array
     {
         $sinais = [
             'instalacao' => '~\b(instala(?:ção|cao|r)|installation|setup|composer\s+install)\b~iu',
             'ambiente' => '~(?:\.env(?:\.example)?|vari[aá]ve(?:l|is)\s+de\s+ambiente|environment\s+variables?|configuration|configura(?:ção|cao))~iu',
             'testes' => '~\b(testes?|tests?|phpunit|pest|artisan\s+test)\b~iu',
             'desenvolvimento' => '~\b(desenvolvimento|development|local\s+development|artisan\s+serve|npm\s+run\s+dev|composer\s+run\s+dev)\b~iu',
-            'deploy' => '~\b(deploy(?:ment)?|produção|producao|production|release)\b~iu',
+            'producao' => '~\b(deploy(?:ment)?|produção|producao|production|release)\b~iu',
         ];
         $detectados = [];
 
@@ -160,7 +160,7 @@ class DocumentationAnalyzer
         );
     }
 
-    private function localizarReadme(string $diretorioProjeto): ?string
+    private function localizarArquivoReadme(string $diretorioProjeto): ?string
     {
         foreach (['README.md', 'README.rst', 'README.txt'] as $nome) {
             $caminho = $diretorioProjeto.DIRECTORY_SEPARATOR.$nome;

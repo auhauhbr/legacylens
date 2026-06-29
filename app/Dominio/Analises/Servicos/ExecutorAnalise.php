@@ -53,7 +53,7 @@ class ExecutorAnalise
 
             $diretorioProjeto = $this->resolvedorCaminho->resolver($projeto->caminho_local);
             $this->criarAchadosIniciais($analise);
-            $this->executarComposerAnalyzer($analise, $diretorioProjeto);
+            $this->executarAnalisadorComposer($analise, $diretorioProjeto);
             $this->persistirAchados($analise, $this->documentationAnalyzer->analisar($diretorioProjeto));
             $this->persistirAchados($analise, $this->ciAnalyzer->analisar($diretorioProjeto));
 
@@ -112,7 +112,7 @@ class ExecutorAnalise
         }
     }
 
-    private function executarComposerAnalyzer(Analise $analise, string $diretorioProjeto): void
+    private function executarAnalisadorComposer(Analise $analise, string $diretorioProjeto): void
     {
         $resultado = $this->composerAnalyzer->analisar($diretorioProjeto);
 

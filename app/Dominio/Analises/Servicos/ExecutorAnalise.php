@@ -2,6 +2,7 @@
 
 namespace App\Dominio\Analises\Servicos;
 
+use App\Dominio\Analises\Analisadores\ComposerAnalyzer;
 use App\Dominio\Analises\DTO\DadosAchado;
 use App\Enums\CategoriaAchado;
 use App\Enums\NivelRisco;
@@ -17,6 +18,7 @@ class ExecutorAnalise
     public function __construct(
         private readonly ResolvedorCaminhoSeguro $resolvedorCaminho,
         private readonly FabricaAchados $fabricaAchados,
+        private readonly ComposerAnalyzer $composerAnalyzer,
     ) {}
 
     public function executar(Analise $analise): Analise
@@ -45,8 +47,9 @@ class ExecutorAnalise
                 throw new RuntimeException('O projeto não possui um caminho local cadastrado.');
             }
 
-            $this->resolvedorCaminho->resolver($projeto->caminho_local);
-            $this->criarAchadosTemporarios($analise);
+            $diretorioProjeto = $this->resolvedorCaminho->resolver($projeto->caminho_local);
+            $this->criarAchadosIniciais($analise);
+            $this->executarComposerAnalyzer($analise, $diretorioProjeto);
 
             $pontuacao = $this->calcularPontuacaoTemporaria($analise);
 
@@ -56,7 +59,8 @@ class ExecutorAnalise
                 'duracao_segundos' => $this->duracaoEmSegundos($inicio),
                 'pontuacao' => $pontuacao,
                 'nivel_risco' => $this->nivelRisco($pontuacao),
-                'resumo' => 'Infraestrutura validada. Analisadores reais ainda estão pendentes.',
+                'resumo' => 'Análise passiva do Composer concluída.',
+                'versoes_analisadores' => ['composer' => ComposerAnalyzer::VERSAO],
             ])->save();
         } catch (Throwable $excecao) {
             $analise->forceFill([
@@ -70,7 +74,7 @@ class ExecutorAnalise
         return $analise->refresh();
     }
 
-    private function criarAchadosTemporarios(Analise $analise): void
+    private function criarAchadosIniciais(Analise $analise): void
     {
         $dados = [
             new DadosAchado(
@@ -91,20 +95,34 @@ class ExecutorAnalise
                 evidencia: ['diretorio_valido' => true],
                 metadados: ['temporario' => true],
             ),
-            new DadosAchado(
-                codigo: 'analisadores.pendentes',
-                categoria: CategoriaAchado::Arquitetura,
-                severidade: SeveridadeAchado::Informativa,
-                titulo: 'Analisadores pendentes',
-                descricao: 'Os analisadores técnicos serão implementados na próxima fase.',
-                recomendacao: 'Executar novamente a análise após a implementação dos analisadores.',
-                evidencia: ['analisadores_executados' => 0],
-                metadados: ['temporario' => true],
-            ),
         ];
 
         foreach ($dados as $achado) {
             $this->fabricaAchados->criar($analise, $achado);
+        }
+    }
+
+    private function executarComposerAnalyzer(Analise $analise, string $diretorioProjeto): void
+    {
+        $resultado = $this->composerAnalyzer->analisar($diretorioProjeto);
+
+        foreach ($resultado->achados as $achado) {
+            $this->fabricaAchados->criar($analise, $achado);
+        }
+
+        foreach ($resultado->dependencias as $dependencia) {
+            $analise->dependencias()->updateOrCreate([
+                'nome_pacote' => $dependencia['nome_pacote'],
+                'escopo' => $dependencia['escopo'],
+            ], [
+                'restricao' => $dependencia['restricao'],
+                'versao_atual' => $dependencia['versao_atual'],
+                'direta' => true,
+                'desenvolvimento' => $dependencia['desenvolvimento'],
+                'abandonada' => false,
+                'possui_alerta_seguranca' => false,
+                'metadados' => ['origem' => 'composer'],
+            ]);
         }
     }
 

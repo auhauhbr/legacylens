@@ -132,7 +132,7 @@ class InfraestruturaAnaliseTest extends TestCase
         $resultado = app(ExecutorAnalise::class)->executar($analise);
 
         $this->assertSame(StatusAnalise::Concluida, $resultado->status);
-        $this->assertSame(96, $resultado->pontuacao);
+        $this->assertSame(86, $resultado->pontuacao);
         $this->assertNotNull($resultado->iniciado_em);
         $this->assertNotNull($resultado->finalizado_em);
         $this->assertNotNull($resultado->duracao_segundos);
@@ -163,14 +163,39 @@ class InfraestruturaAnaliseTest extends TestCase
             'packages' => [['name' => 'laravel/framework', 'version' => 'v12.1.0']],
             'packages-dev' => [],
         ], JSON_THROW_ON_ERROR));
+        File::put($diretorio.'/README.md', <<<'MARKDOWN'
+# Projeto
+
+## Instalação
+Execute composer install e configure o .env.
+
+## Desenvolvimento
+Execute php artisan serve.
+
+## Testes
+Execute php artisan test.
+
+## Deploy
+Siga o processo de produção.
+MARKDOWN);
+        File::put($diretorio.'/.env.example', 'APP_ENV=local');
+        File::makeDirectory($diretorio.'/docs');
+        File::makeDirectory($diretorio.'/.github/workflows', 0755, true);
+        File::put($diretorio.'/.github/workflows/ci.yml', "steps:\n  - run: php artisan test\n  - run: ./vendor/bin/pint --test\n");
         $analise = $this->criarAnalise($diretorio);
 
         app(ExecutorAnalise::class)->executar($analise);
 
         $this->assertSame([
             'analise.iniciada',
+            'ci.comandos_detectados',
+            'ci.configuracao_detectada',
             'composer.laravel_detectado',
             'composer.php_detectado',
+            'documentacao.env_exemplo_detectado',
+            'documentacao.publica_detectada',
+            'documentacao.readme_cobertura',
+            'documentacao.readme_detectado',
             'projeto.caminho_validado',
         ], $analise->achados()->orderBy('codigo')->pluck('codigo')->all());
         $this->assertDatabaseHas('dependencias', [
@@ -179,7 +204,11 @@ class InfraestruturaAnaliseTest extends TestCase
             'restricao' => '^12.0',
             'versao_atual' => 'v12.1.0',
         ]);
-        $this->assertSame(['composer' => '1.0.0'], $analise->refresh()->versoes_analisadores);
+        $this->assertSame([
+            'composer' => '1.0.0',
+            'documentacao' => '1.0.0',
+            'ci' => '1.0.0',
+        ], $analise->refresh()->versoes_analisadores);
     }
 
     #[Test]

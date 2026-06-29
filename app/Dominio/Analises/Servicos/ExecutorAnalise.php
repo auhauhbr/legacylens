@@ -2,7 +2,9 @@
 
 namespace App\Dominio\Analises\Servicos;
 
+use App\Dominio\Analises\Analisadores\CiAnalyzer;
 use App\Dominio\Analises\Analisadores\ComposerAnalyzer;
+use App\Dominio\Analises\Analisadores\DocumentationAnalyzer;
 use App\Dominio\Analises\DTO\DadosAchado;
 use App\Enums\CategoriaAchado;
 use App\Enums\NivelRisco;
@@ -19,6 +21,8 @@ class ExecutorAnalise
         private readonly ResolvedorCaminhoSeguro $resolvedorCaminho,
         private readonly FabricaAchados $fabricaAchados,
         private readonly ComposerAnalyzer $composerAnalyzer,
+        private readonly DocumentationAnalyzer $documentationAnalyzer,
+        private readonly CiAnalyzer $ciAnalyzer,
     ) {}
 
     public function executar(Analise $analise): Analise
@@ -50,6 +54,8 @@ class ExecutorAnalise
             $diretorioProjeto = $this->resolvedorCaminho->resolver($projeto->caminho_local);
             $this->criarAchadosIniciais($analise);
             $this->executarComposerAnalyzer($analise, $diretorioProjeto);
+            $this->persistirAchados($analise, $this->documentationAnalyzer->analisar($diretorioProjeto));
+            $this->persistirAchados($analise, $this->ciAnalyzer->analisar($diretorioProjeto));
 
             $pontuacao = $this->calcularPontuacaoTemporaria($analise);
 
@@ -59,8 +65,12 @@ class ExecutorAnalise
                 'duracao_segundos' => $this->duracaoEmSegundos($inicio),
                 'pontuacao' => $pontuacao,
                 'nivel_risco' => $this->nivelRisco($pontuacao),
-                'resumo' => 'Análise passiva do Composer concluída.',
-                'versoes_analisadores' => ['composer' => ComposerAnalyzer::VERSAO],
+                'resumo' => 'Análise passiva de dependências, documentação e integração contínua concluída.',
+                'versoes_analisadores' => [
+                    'composer' => ComposerAnalyzer::VERSAO,
+                    'documentacao' => DocumentationAnalyzer::VERSAO,
+                    'ci' => CiAnalyzer::VERSAO,
+                ],
             ])->save();
         } catch (Throwable $excecao) {
             $analise->forceFill([
@@ -123,6 +133,14 @@ class ExecutorAnalise
                 'possui_alerta_seguranca' => false,
                 'metadados' => ['origem' => 'composer'],
             ]);
+        }
+    }
+
+    /** @param list<DadosAchado> $achados */
+    private function persistirAchados(Analise $analise, array $achados): void
+    {
+        foreach ($achados as $achado) {
+            $this->fabricaAchados->criar($analise, $achado);
         }
     }
 

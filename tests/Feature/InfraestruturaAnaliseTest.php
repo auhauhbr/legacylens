@@ -132,7 +132,7 @@ class InfraestruturaAnaliseTest extends TestCase
         $resultado = app(ExecutorAnalise::class)->executar($analise);
 
         $this->assertSame(StatusAnalise::Concluida, $resultado->status);
-        $this->assertSame(100, $resultado->pontuacao);
+        $this->assertSame(96, $resultado->pontuacao);
         $this->assertNotNull($resultado->iniciado_em);
         $this->assertNotNull($resultado->finalizado_em);
         $this->assertNotNull($resultado->duracao_segundos);
@@ -152,17 +152,34 @@ class InfraestruturaAnaliseTest extends TestCase
     }
 
     #[Test]
-    public function teste_executor_analise_cria_achados_informativos_temporarios(): void
+    public function teste_executor_analise_integra_composer_analyzer(): void
     {
-        $analise = $this->criarAnalise($this->criarDiretorioTemporario());
+        $diretorio = $this->criarDiretorioTemporario();
+        File::put($diretorio.'/composer.json', json_encode([
+            'require' => ['php' => '^8.3', 'laravel/framework' => '^12.0'],
+            'require-dev' => ['pestphp/pest' => '^3.0', 'larastan/larastan' => '^3.0', 'laravel/pint' => '^1.0'],
+        ], JSON_THROW_ON_ERROR));
+        File::put($diretorio.'/composer.lock', json_encode([
+            'packages' => [['name' => 'laravel/framework', 'version' => 'v12.1.0']],
+            'packages-dev' => [],
+        ], JSON_THROW_ON_ERROR));
+        $analise = $this->criarAnalise($diretorio);
 
         app(ExecutorAnalise::class)->executar($analise);
 
         $this->assertSame([
-            'analisadores.pendentes',
             'analise.iniciada',
+            'composer.laravel_detectado',
+            'composer.php_detectado',
             'projeto.caminho_validado',
         ], $analise->achados()->orderBy('codigo')->pluck('codigo')->all());
+        $this->assertDatabaseHas('dependencias', [
+            'analise_id' => $analise->id,
+            'nome_pacote' => 'laravel/framework',
+            'restricao' => '^12.0',
+            'versao_atual' => 'v12.1.0',
+        ]);
+        $this->assertSame(['composer' => '1.0.0'], $analise->refresh()->versoes_analisadores);
     }
 
     #[Test]

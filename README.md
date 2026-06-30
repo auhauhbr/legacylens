@@ -181,13 +181,10 @@ LegacyLens/
 │   ├── Filament/Resources/
 │   ├── Jobs/
 │   └── Models/
-├── checklists/
 ├── config/
 ├── database/
 │   ├── factories/
 │   └── migrations/
-├── docs/
-├── prompts/
 ├── resources/
 ├── routes/
 └── tests/
@@ -293,21 +290,16 @@ composer validate --strict
 - [ ] relatório executivo e plano técnico em Markdown;
 - [ ] etapas de modernização;
 - [ ] rascunhos revisáveis de issues do GitHub;
-- [ ] documentação operacional e dados de demonstração do MVP.
-
-Consulte o [plano de implementação](docs/IMPLEMENTATION_PLAN.md) e o
-[checklist de aceite](checklists/MVP_ACCEPTANCE.md) para acompanhar o escopo.
+- [ ] dados de demonstração do MVP.
 
 ## Como contribuir
 
 Contribuições são bem-vindas enquanto o projeto evolui. Antes de começar:
 
-1. leia o [AGENTS.md](AGENTS.md) e a
-   [especificação completa](docs/LEGACYLENS_FULL_SPEC.md);
-2. abra uma issue descrevendo a proposta ou o problema;
-3. mantenha mudanças pequenas, testáveis e compatíveis com o princípio read-only;
-4. não inclua código, credenciais ou dados de projetos privados nos testes;
-5. execute os testes e validadores antes de enviar um pull request.
+1. abra uma issue descrevendo a proposta ou o problema;
+2. mantenha mudanças pequenas, testáveis e compatíveis com o princípio read-only;
+3. não inclua código, credenciais ou dados de projetos privados nos testes;
+4. execute os testes e validadores antes de enviar um pull request.
 
 Ao relatar um bug, prefira um projeto fake mínimo ou um repositório público que
 permita reproduzir o comportamento.
@@ -318,13 +310,6 @@ Não publique tokens, credenciais, `.env`, código proprietário ou outros dados
 sensíveis em issues. Para comunicar uma vulnerabilidade, entre em contato
 diretamente pelo e-mail informado abaixo até que exista uma política de segurança
 dedicada no repositório.
-
-## Documentação
-
-- [Especificação completa](docs/LEGACYLENS_FULL_SPEC.md)
-- [Especificação resumida](docs/LEGACYLENS_SPEC.md)
-- [Plano de implementação](docs/IMPLEMENTATION_PLAN.md)
-- [Checklist do MVP](checklists/MVP_ACCEPTANCE.md)
 
 ## Licença
 

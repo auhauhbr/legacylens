@@ -5,6 +5,7 @@ namespace App\Dominio\Analises\Servicos;
 use App\Dominio\Analises\Analisadores\CiAnalyzer;
 use App\Dominio\Analises\Analisadores\ComposerAnalyzer;
 use App\Dominio\Analises\Analisadores\DocumentationAnalyzer;
+use App\Dominio\Analises\Analisadores\FileHotspotAnalyzer;
 use App\Dominio\Analises\DTO\DadosAchado;
 use App\Enums\CategoriaAchado;
 use App\Enums\NivelRisco;
@@ -23,6 +24,7 @@ class ExecutorAnalise
         private readonly ComposerAnalyzer $composerAnalyzer,
         private readonly DocumentationAnalyzer $documentationAnalyzer,
         private readonly CiAnalyzer $ciAnalyzer,
+        private readonly FileHotspotAnalyzer $fileHotspotAnalyzer,
     ) {}
 
     public function executar(Analise $analise): Analise
@@ -56,6 +58,7 @@ class ExecutorAnalise
             $this->executarAnalisadorComposer($analise, $diretorioProjeto);
             $this->persistirAchados($analise, $this->documentationAnalyzer->analisar($diretorioProjeto));
             $this->persistirAchados($analise, $this->ciAnalyzer->analisar($diretorioProjeto));
+            $this->executarAnalisadorArquivos($analise, $diretorioProjeto);
 
             $pontuacao = $this->calcularPontuacaoTemporaria($analise);
 
@@ -70,6 +73,7 @@ class ExecutorAnalise
                     'composer' => ComposerAnalyzer::VERSAO,
                     'documentacao' => DocumentationAnalyzer::VERSAO,
                     'ci' => CiAnalyzer::VERSAO,
+                    'hotspots_arquivos' => FileHotspotAnalyzer::VERSAO,
                 ],
             ])->save();
         } catch (Throwable $excecao) {
@@ -132,6 +136,25 @@ class ExecutorAnalise
                 'abandonada' => false,
                 'possui_alerta_seguranca' => false,
                 'metadados' => ['origem' => 'composer'],
+            ]);
+        }
+    }
+
+    private function executarAnalisadorArquivos(Analise $analise, string $diretorioProjeto): void
+    {
+        $resultado = $this->fileHotspotAnalyzer->analisar($diretorioProjeto);
+        $this->persistirAchados($analise, $resultado->achados);
+
+        foreach ($resultado->metricas as $metrica) {
+            $analise->metricasArquivos()->updateOrCreate([
+                'caminho_arquivo' => $metrica['caminho_arquivo'],
+            ], [
+                'tipo_arquivo' => $metrica['tipo_arquivo'],
+                'total_linhas' => $metrica['total_linhas'],
+                'complexidade_estimada' => $metrica['complexidade_estimada'],
+                'controlador' => $metrica['tipo_arquivo'] === 'controller',
+                'modelo' => $metrica['tipo_arquivo'] === 'model',
+                'servico' => $metrica['tipo_arquivo'] === 'service',
             ]);
         }
     }

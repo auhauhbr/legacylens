@@ -182,8 +182,11 @@ MARKDOWN);
         File::makeDirectory($diretorio.'/docs');
         File::makeDirectory($diretorio.'/.github/workflows', 0755, true);
         File::put($diretorio.'/.github/workflows/ci.yml', "steps:\n  - run: php artisan test\n  - run: ./vendor/bin/pint --test\n");
+        File::makeDirectory($diretorio.'/app/Services', 0755, true);
+        File::put($diretorio.'/app/Services/ServicoExemplo.php', "<?php\nclass ServicoExemplo {}\n");
         $analise = $this->criarAnalise($diretorio);
 
+        app(ExecutorAnalise::class)->executar($analise);
         app(ExecutorAnalise::class)->executar($analise);
 
         $this->assertSame([
@@ -204,10 +207,20 @@ MARKDOWN);
             'restricao' => '^12.0',
             'versao_atual' => 'v12.1.0',
         ]);
+        $this->assertDatabaseHas('metricas_arquivos', [
+            'analise_id' => $analise->id,
+            'caminho_arquivo' => 'app/Services/ServicoExemplo.php',
+            'tipo_arquivo' => 'service',
+            'total_linhas' => 2,
+            'complexidade_estimada' => 0,
+            'servico' => true,
+        ]);
+        $this->assertSame(1, $analise->metricasArquivos()->count());
         $this->assertSame([
             'composer' => '1.0.0',
             'documentacao' => '1.0.0',
             'ci' => '1.0.0',
+            'hotspots_arquivos' => '1.0.0',
         ], $analise->refresh()->versoes_analisadores);
     }
 

@@ -4,7 +4,7 @@ return [
     'ignored_directories' => [
         'vendor',
         'node_modules',
-        'storage/logs',
+        'storage',
         'bootstrap/cache',
         '.git',
         '.idea',

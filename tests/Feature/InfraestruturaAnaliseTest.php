@@ -259,6 +259,28 @@ MARKDOWN);
     }
 
     #[Test]
+    public function teste_executor_analise_integra_codigo_de_debug(): void
+    {
+        $diretorio = $this->criarDiretorioTemporario();
+        File::makeDirectory($diretorio.'/app/Services', 0755, true);
+        File::put(
+            $diretorio.'/app/Services/ServicoLegado.php',
+            "<?php\nclass ServicoLegado {\n    public function executar(): void { dd('revisar'); }\n}\n",
+        );
+        $analise = $this->criarAnalise($diretorio);
+
+        app(ExecutorAnalise::class)->executar($analise);
+
+        $this->assertDatabaseHas('achados', [
+            'analise_id' => $analise->id,
+            'codigo' => 'debug.interrupcao_execucao',
+            'severidade' => 'alta',
+            'caminho_arquivo' => 'app/Services/ServicoLegado.php',
+            'linha_inicial' => 3,
+        ]);
+    }
+
+    #[Test]
     public function teste_iniciador_cria_analise_pendente_e_dispara_job(): void
     {
         Bus::fake();

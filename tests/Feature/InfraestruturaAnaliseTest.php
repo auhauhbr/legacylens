@@ -226,6 +226,38 @@ MARKDOWN);
     }
 
     #[Test]
+    public function teste_executor_analise_integra_riscos_de_consulta(): void
+    {
+        $diretorio = $this->criarDiretorioTemporario();
+        File::makeDirectory($diretorio.'/app/Services', 0755, true);
+        File::put(
+            $diretorio.'/app/Services/ConsultaLegada.php',
+            "<?php\nDB::select('SELECT * FROM usuarios WHERE id = '.\$_GET['id']);\n",
+        );
+        $analise = $this->criarAnalise($diretorio);
+
+        app(ExecutorAnalise::class)->executar($analise);
+
+        $this->assertDatabaseHas('achados', [
+            'analise_id' => $analise->id,
+            'codigo' => 'consultas.execucao_direta',
+            'severidade' => 'media',
+            'caminho_arquivo' => 'app/Services/ConsultaLegada.php',
+            'linha_inicial' => 2,
+        ]);
+        $this->assertDatabaseHas('achados', [
+            'analise_id' => $analise->id,
+            'codigo' => 'consultas.sql_raw_concatenacao',
+            'severidade' => 'alta',
+        ]);
+        $this->assertDatabaseHas('achados', [
+            'analise_id' => $analise->id,
+            'codigo' => 'consultas.possivel_entrada_usuario',
+            'severidade' => 'alta',
+        ]);
+    }
+
+    #[Test]
     public function teste_iniciador_cria_analise_pendente_e_dispara_job(): void
     {
         Bus::fake();

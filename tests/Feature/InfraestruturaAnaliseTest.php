@@ -222,6 +222,7 @@ MARKDOWN);
             'ci' => '1.0.0',
             'hotspots_arquivos' => '1.0.0',
             'riscos_consultas' => '1.0.0',
+            'codigo_debug' => '1.0.0',
         ], $analise->refresh()->versoes_analisadores);
     }
 

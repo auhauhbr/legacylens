@@ -6,6 +6,7 @@ use App\Dominio\Analises\Analisadores\CiAnalyzer;
 use App\Dominio\Analises\Analisadores\ComposerAnalyzer;
 use App\Dominio\Analises\Analisadores\DocumentationAnalyzer;
 use App\Dominio\Analises\Analisadores\FileHotspotAnalyzer;
+use App\Dominio\Analises\Analisadores\QueryRiskAnalyzer;
 use App\Dominio\Analises\DTO\DadosAchado;
 use App\Enums\CategoriaAchado;
 use App\Enums\NivelRisco;
@@ -25,6 +26,7 @@ class ExecutorAnalise
         private readonly DocumentationAnalyzer $documentationAnalyzer,
         private readonly CiAnalyzer $ciAnalyzer,
         private readonly FileHotspotAnalyzer $fileHotspotAnalyzer,
+        private readonly QueryRiskAnalyzer $queryRiskAnalyzer,
     ) {}
 
     public function executar(Analise $analise): Analise
@@ -59,6 +61,7 @@ class ExecutorAnalise
             $this->persistirAchados($analise, $this->documentationAnalyzer->analisar($diretorioProjeto));
             $this->persistirAchados($analise, $this->ciAnalyzer->analisar($diretorioProjeto));
             $this->executarAnalisadorArquivos($analise, $diretorioProjeto);
+            $this->persistirAchados($analise, $this->queryRiskAnalyzer->analisar($diretorioProjeto));
 
             $pontuacao = $this->calcularPontuacaoTemporaria($analise);
 
@@ -68,12 +71,13 @@ class ExecutorAnalise
                 'duracao_segundos' => $this->duracaoEmSegundos($inicio),
                 'pontuacao' => $pontuacao,
                 'nivel_risco' => $this->nivelRisco($pontuacao),
-                'resumo' => 'Análise passiva de dependências, documentação e integração contínua concluída.',
+                'resumo' => 'Análise passiva de dependências, documentação, integração contínua, arquivos e consultas concluída.',
                 'versoes_analisadores' => [
                     'composer' => ComposerAnalyzer::VERSAO,
                     'documentacao' => DocumentationAnalyzer::VERSAO,
                     'ci' => CiAnalyzer::VERSAO,
                     'hotspots_arquivos' => FileHotspotAnalyzer::VERSAO,
+                    'riscos_consultas' => QueryRiskAnalyzer::VERSAO,
                 ],
             ])->save();
         } catch (Throwable $excecao) {
